@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-canary
+  labels:
+    app: hello-canary
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-canary
+  template:
+    metadata:
+      labels:
+        app: hello-canary
+    spec:
+      containers:
+      - name: hello
+        image: ruly-reg.xxx.com/test/hello:canary
+        ports:
+        - containerPort: 8080

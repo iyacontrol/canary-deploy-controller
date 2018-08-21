@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ambassador
+  namespace: deploy
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: hello-release-copy-mapping
+      prefix: /
+      service: hello-release-copy.default
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: hello-canary-mapping
+      prefix: /
+      service: hello-canary.default
+      weight: 30
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-release-copy
+  # annotations:
+  #   getambassador.io/config: |
+  #     ---
+  #     apiVersion: ambassador/v0
+  #     kind: Mapping
+  #     name: hello-release-mapping
+  #     prefix: /
+  #     service: hello-release
+  #     # ---
+  #     # apiVersion: ambassador/v0
+  #     # kind: Mapping
+  #     # name: hello-canary-mapping
+  #     # prefix: /hello
+  #     # service: hello-canary
+  #     # weight: 10
+spec:
+  selector:
+    app: hello-release
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+      

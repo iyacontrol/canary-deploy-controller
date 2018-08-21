@@ -1,0 +1,36 @@
+apiVersion: canarydeploycontroller.k8s.io/v1
+kind: Canary
+metadata:
+  name: hello-canary-deploy
+  namespace: default
+spec:
+  serviceName: "hello"
+  weight: 30
+  operation: Do
+  prefix: /
+  deployYaml: |+
+  
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      namespace: default
+      name: hello
+      labels:
+        app: hello
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: hello
+      template:
+        metadata:
+          labels:
+            app: hello
+            trace: hello-release
+        spec:
+          containers:
+          - name: hello
+            image: ruly-reg.xxx.com/test/hello:canary
+            ports:
+            - containerPort: 8080 
+  

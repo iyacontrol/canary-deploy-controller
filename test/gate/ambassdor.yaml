@@ -1,0 +1,167 @@
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ambassador-metrics
+  namespace: deploy
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "9102"
+spec:
+  selector:
+    app: ambassador
+  ports:
+    - name: metrics
+      port: 9102
+      targetPort: 9102
+  type: ClusterIP
+---
+# apiVersion: rbac.authorization.k8s.io/v1beta1
+# kind: ClusterRole
+# metadata:
+#   name: ambassador
+#   namespace: deploy
+# rules:
+# - apiGroups: [""]
+#   resources:
+#   - services
+#   verbs: ["get", "list", "watch"]
+# ---
+# apiVersion: v1
+# kind: ServiceAccount
+# metadata:
+#   name: ambassador
+#   namespace: deploy
+# ---
+# apiVersion: rbac.authorization.k8s.io/v1beta1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: ambassador
+#   namespace: deploy
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: ambassador
+# subjects:
+# - kind: ServiceAccount
+#   name: ambassador
+#   namespace: deploy
+# ---
+# apiVersion: extensions/v1beta1
+# kind: Deployment
+# metadata: 
+#  name: ambassador
+#  namespace: deploy
+# spec:
+#   replicas: 2
+#   strategy:
+#     type: RollingUpdate
+#   revisionHistoryLimit: 1
+#   template:
+#     metadata:
+#       labels: 
+#         app: ambassador
+#     spec:
+#       serviceAccountName: ambassador
+#       containers:
+#       - image: quay.io/datawire/ambassador:0.33.0
+#         imagePullPolicy: IfNotPresent
+#         name: ambassador
+#         ports:
+#         - name: http-api
+#           containerPort: 80
+#       - name: statsd-exporter
+#         image: prom/statsd-exporter
+#       restartPolicy: Always
+#       dnsPolicy: ClusterFirst
+#       restartPolicy: Always
+#       securityContext: {}
+#       terminationGracePeriodSeconds: 30
+
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: ambassador
+  namespace: deploy
+rules:
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["create", "update", "patch", "get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ambassador
+  namespace: deploy
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: ambassador
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ambassador
+subjects:
+- kind: ServiceAccount
+  name: ambassador
+  namespace: deploy
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ambassador
+  namespace: deploy
+spec:
+  replicas: 3
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+      labels:
+        app: ambassador
+    spec:
+      serviceAccountName: ambassador
+      containers:
+      - name: ambassador
+        image: quay.io/datawire/ambassador:0.33.0
+        resources:
+          limits:
+            cpu: 1
+            memory: 400Mi
+          requests:
+            cpu: 200m
+            memory: 100Mi
+        env:
+        - name: AMBASSADOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace          
+        livenessProbe:
+          httpGet:
+            path: /ambassador/v0/check_alive
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 3
+        readinessProbe:
+          httpGet:
+            path: /ambassador/v0/check_ready
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 3
+      - name: statsd
+        image: prom/statsd-exporter
+      restartPolicy: Always
